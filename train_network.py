@@ -12,44 +12,69 @@ import matplotlib.pyplot as plt
 
 directory = os.path.dirname(os.path.realpath(__file__))
 
-batch_size = 50
+batch_size = 100
 
 
 # Our UA function
-def univAprox(x, hidden_dim=50):
+def univAprox(x, hidden_dim1=240, hidden_dim2=120, hidden_dim3=60):
     # The simple case is f: R -> R
     input_dim = 6
     output_dim = 36
+    keep_prob = 0.8
 
     with tf.variable_scope('UniversalApproximator'):
-        ua_w = tf.get_variable(
-            name='ua_w'
-            , shape=[input_dim, hidden_dim]
+        ua1_w = tf.get_variable(
+            name='ua1_w'
+            , shape=[input_dim, hidden_dim1]
             , initializer=tf.random_normal_initializer(stddev=.1)
         )
-        ua_b = tf.get_variable(
-            name='ua_b'
-            , shape=[hidden_dim]
+        ua1_b = tf.get_variable(
+            name='ua1_b'
+            , shape=[hidden_dim1]
             , initializer=tf.constant_initializer(0.)
         )
-        z = tf.matmul(x, ua_w) + ua_b
-        a = tf.nn.relu(z)  # we now have our hidden_dim activations
+        ua2_w = tf.get_variable(
+            name='ua2_w'
+            , shape=[hidden_dim1, hidden_dim2]
+            , initializer=tf.random_normal_initializer(stddev=.1)
+        )
+        ua2_b = tf.get_variable(
+            name='ua2_b'
+            , shape=[hidden_dim2]
+            , initializer=tf.constant_initializer(0.)
+        )
+        ua3_w = tf.get_variable(
+            name='ua3_w'
+            , shape=[hidden_dim2, hidden_dim3]
+            , initializer=tf.random_normal_initializer(stddev=.1)
+        )
+        ua3_b = tf.get_variable(
+            name='ua3_b'
+            , shape=[hidden_dim3]
+            , initializer=tf.constant_initializer(0.)
+        )
+        z1 = tf.matmul(x, ua1_w) + ua1_b
+        dropped1 = tf.nn.dropout(z1, keep_prob=keep_prob)
+        a1 = tf.nn.relu(dropped1)
+        z2 = tf.matmul(a1, ua2_w) + ua2_b
+        dropped2 = tf.nn.dropout(z2, keep_prob=keep_prob)
+        a2 = tf.nn.relu(dropped2)
+        z3 = tf.matmul(a2, ua3_w) + ua3_b
+        dropped3 = tf.nn.dropout(z3, keep_prob=keep_prob)
+        a3 = tf.nn.relu(dropped3)
 
         ua_v = tf.get_variable(
             name='ua_v'
-            , shape=[hidden_dim, output_dim]
+            , shape=[hidden_dim3, output_dim]
             , initializer=tf.random_normal_initializer(stddev=.1)
         )
-        z = tf.matmul(a, ua_v)
+        z = tf.matmul(a3, ua_v)
 
     return z
 
 
 if __name__ == '__main__':  # When we call the script directly ...
     # ... we parse a potentiel --nb_neurons argument
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--nb_neurons", default=250, type=int, help="Number of neurons or the UA")
-    args = parser.parse_args()
 
     # We build the computation graph
     with tf.variable_scope('Graph') as scope:
@@ -58,7 +83,7 @@ if __name__ == '__main__':  # When we call the script directly ...
         y_true = tf.placeholder(tf.float32, [None, 36], name="y_true")
 
         # We define the ground truth and our approximation
-        y = univAprox(x, args.nb_neurons)
+        y = univAprox(x)
 
         # We define the resulting loss and graph it using tensorboard
         with tf.variable_scope('Loss'):
@@ -68,7 +93,7 @@ if __name__ == '__main__':  # When we call the script directly ...
             loss_summary_t = tf.summary.scalar('loss', loss)
 
             # We define our train operation using the Adam optimizer
-        adam = tf.train.AdamOptimizer(learning_rate=1e-3)
+        adam = tf.train.AdamOptimizer(learning_rate=0.003)
         train_op = adam.minimize(loss)
 
     # This is some tricks to push our matplotlib graph inside tensorboard
@@ -94,8 +119,8 @@ if __name__ == '__main__':  # When we call the script directly ...
 
         print('Training our universal approximator')
         sess.run(tf.global_variables_initializer())
-        for i in range(200):
-            for root, dirs, files in os.walk("./dataset/trening/", topdown=True):
+        for i in range(100):
+            for root, dirs, files in os.walk("./dataset/sve/", topdown=True):
                 for name in files:
                     # print("Name = ", root)
                     if name == "data.txt":
@@ -127,101 +152,59 @@ if __name__ == '__main__':  # When we call the script directly ...
                 print('batch: %d, loss: %f' % (i + 1, current_loss))
 
         print('Calculating result')
-        # We compute a dense enough graph of our functions
-        x_input = [
-                 [0.0676666666667,	0.167142857143,	0.0604744525547,	0.023125,	0.789285714286,	0.852142857143]
-        ]
-        y_res = sess.run([y], feed_dict={
-            x: x_input
-        })
-        print("Input: ", x_input)
-        print("y_out: ", y_res)
-        data = np.squeeze(y_res)
-        plt.plot(data)
-        plt.show()
 
-        # Finally we save the graph to check that it looks like what we wanted
-        saver.save(sess, result_folder + '/data.chkp')
-
-
-'''
-# Python optimisation variables
-learning_rate = 0.05
-epochs = 10
-batch_size = 100
-
-# declare the training data placeholders
-x = tf.placeholder(tf.float32, [None, 6])
-# now declare the output data placeholder
-y = tf.placeholder(tf.float32, [None, 36])
-
-W1 = tf.Variable(tf.random_normal([6, 100], stddev=0.03), name='W1')
-b1 = tf.Variable(tf.random_normal([100]), name='b1')
-# and the weights connecting the hidden layer to the output layer
-W2 = tf.Variable(tf.random_normal([100, 36], stddev=0.03), name='W2')
-b2 = tf.Variable(tf.random_normal([36]), name='b2')
-
-hidden_out = tf.add(tf.matmul(x, W1), b1)
-hidden_out = tf.nn.relu(hidden_out)
-
-y_ = tf.add(tf.matmul(hidden_out, W2), b2)
-
-y_clipped = tf.clip_by_value(y_, 1e-10, 0.9999999)
-cross_entropy = -tf.reduce_mean(tf.reduce_sum(y * tf.log(y_clipped)
-                         + (1 - y) * tf.log(1 - y_clipped), axis=1))
-optimiser = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cross_entropy)
-
-# finally setup the initialisation operator
-init_op = tf.global_variables_initializer()
-
-# define an accuracy assessment operation
-correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
-accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
-
-
-# start the session
-with tf.Session() as sess:
-    # initialise the variables
-    sess.run(init_op)
-    for epoch in range(epochs):
-
-        x_train = []
-        y_train = []
-
-        for root, dirs, files in os.walk("./dataset/trening/", topdown=True):
+        for root, dirs, files in os.walk("./dataset/test/", topdown=True):
             for name in files:
                 # print("Name = ", root)
                 if name == "data.txt":
 
                     f_data = open(os.path.join(root, "data.txt"), "r")
+                    mreza = None
+                    izlaz = None
 
                     for i, line in enumerate(f_data):
                         line = line.strip('\n')
                         line = re.split(r'\t+', line.rstrip('\t'))
                         if i == 1:
-                            x_train.append(list(np.array(line).astype(np.float))[1:-1])
+                            print(root)
+                            niz = list(np.array(line).astype(np.float))[1:-1]
+                            x_train.append(niz)
                             if len(x_train[-1]) > 9:
                                 print(root)
                                 exit()
+                            x_input = [niz]
+                            y_res = sess.run([y], feed_dict={
+                                x: x_input
+                            })
+                            print("Input: ", x_input)
+                            print("y_out: ", y_res)
+                            new_dir = os.path.join("./test_results/" + root[11:])
+                            if not os.path.exists(new_dir):
+                                os.makedirs(new_dir)
+
+                            f_data = open(os.path.join(new_dir, "data.txt"), "w")
+
+                            f_data.writelines("neural_network_result")
+                            tmp_str = ""
+                            for number in y_res[0][0]:
+                                tmp_str += str(number)
+                                tmp_str += ","
+                            f_data.writelines(tmp_str[0:-1])
+                            mreza = np.squeeze(y_res)
+                            from scipy.signal import savgol_filter
+
+                            yhat = savgol_filter(mreza, 21, 5)
+
                         elif i == 3:
-                            y_train.append(list(np.array(line).astype(np.float)))
+                            izlaz = np.array(line).astype(np.float)
+                            izlaz = np.squeeze(izlaz)
 
-        avg_cost = 0
-        for i in range(int((len(x_train)-1)/batch_size)):
-            batch_x = x_train[i*batch_size:i*batch_size+batch_size]
-            batch_y = y_train[i*batch_size:i*batch_size+batch_size]
-            _, c = sess.run([optimiser, cross_entropy],
-                            feed_dict={x: batch_x, y: batch_y})
-            # print("Cost = ", c)
-            avg_cost += c
-        avg_cost = avg_cost/len(x_train)
+                            plt.plot(yhat)
+                            plt.plot(izlaz)
+                            plt.show()
 
-        print("Epoch:", (epoch + 1), "cost =", "{:.3f}".format(avg_cost))
-
-    rezultat = sess.run(y_ , feed_dict={x: [[0.0883333333333, 0.172857142857, 0.108649635036, 0.076875, 0.795714285714, 0.852857142857]]})
-    print("Rez: ", rezultat)
-'''
+        # Finally we save the graph to check that it looks like what we wanted
+        #saver.save(sess, result_folder + '/data.chkp')
 
 
 
