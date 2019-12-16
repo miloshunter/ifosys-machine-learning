@@ -51,21 +51,21 @@ if __name__ == '__main__':  # When we call the script directly ...
     from tensorflow.keras.models import Sequential
 
     model = Sequential([
-        Dense(512, input_shape=x_train.shape[1:]),
-        Activation('sigmoid'),
-        Dense(256),
+        Dense(256, input_shape=x_train.shape[1:]),
         Activation('sigmoid'),
         Dense(128),
+        Activation('sigmoid'),
+        Dense(64),
         Activation('sigmoid'),
         Dense(36),
         Activation('sigmoid')
     ])
 
     model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mean_squared_error'])
-    model.fit(x_train, y_train, epochs=30, batch_size=20)
+    model.fit(x_train, y_train, epochs=500, batch_size=500)
 
     scores = model.evaluate(x_train, y_train, verbose=0)
-    print("Baseline Error: %.2f%%" % (100 - scores[1] * 100))
+    print("Baseline Error: %.5f%%" % (100 - scores[1] * 100))
 
     print('Calculating result')
 
