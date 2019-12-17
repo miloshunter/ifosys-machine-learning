@@ -37,7 +37,11 @@ if __name__ == '__main__':  # When we call the script directly ...
                         line = line.strip('\n')
                         line = re.split(r'\t+', line.rstrip('\t'))
                         if i == 1:
-                            x_train.append(list(np.array(line).astype(np.float))[1:-1])
+                            new_element = list(np.array(line).astype(np.float))[1:-1]
+                            new_element.pop(5)
+                            new_element.pop(3)
+                            new_element.pop(0)
+                            x_train.append(new_element)
                             if len(x_train[-1]) > 9:
                                 print(root)
                                 exit()
@@ -62,7 +66,7 @@ if __name__ == '__main__':  # When we call the script directly ...
     ])
 
     model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mean_squared_error'])
-    model.fit(x_train, y_train, epochs=500, batch_size=500)
+    model.fit(x_train, y_train, epochs=50, batch_size=500)
 
     scores = model.evaluate(x_train, y_train, verbose=0)
     print("Baseline Error: %.5f%%" % (100 - scores[1] * 100))
@@ -85,12 +89,12 @@ if __name__ == '__main__':  # When we call the script directly ...
                     line = re.split(r'\t+', line.rstrip('\t'))
                     if i == 1:
                         print(root)
-                        niz = list(np.array(line).astype(np.float))[1:-1]
-                        x_train.append(niz)
-                        if len(x_train[-1]) > 9:
-                            print(root)
-                            exit()
-                        x_input = [niz]
+                        new_element = list(np.array(line).astype(np.float))[1:-1]
+                        new_element.pop(5)
+                        new_element.pop(3)
+                        new_element.pop(0)
+
+                        x_input = [new_element]
                         #y_res = sess.run([y], feed_dict={
                         #    x: x_input
                         #})
