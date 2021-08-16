@@ -1,5 +1,6 @@
 import time, os, argparse, io
 # Tensorflow and numpy!
+import tensorflow.keras.models
 from tensorflow.keras import optimizers
 import numpy as np
 import re
@@ -9,12 +10,9 @@ import re
 import matplotlib
 import matplotlib.pyplot as plt
 
+TRAIN_OR_LOAD = "LOAD"
 
 directory = os.path.dirname(os.path.realpath(__file__))
-
-batch_size = 100
-
-
 
 if __name__ == '__main__':  # When we call the script directly ...
     # ... we parse a potentiel --nb_neurons argument
@@ -38,9 +36,9 @@ if __name__ == '__main__':  # When we call the script directly ...
                         line = re.split(r'\t+', line.rstrip('\t'))
                         if i == 1:
                             new_element = list(np.array(line).astype(np.float))[1:-1]
-                            new_element.pop(5)
-                            new_element.pop(3)
-                            new_element.pop(0)
+                            # new_element.pop(5)
+                            # new_element.pop(3)
+                            # new_element.pop(0)
                             x_train.append(new_element)
                             if len(x_train[-1]) > 9:
                                 print(root)
@@ -52,21 +50,28 @@ if __name__ == '__main__':  # When we call the script directly ...
     y_train = np.asarray(y_train)
 
     from tensorflow.keras.layers import Dense, Activation
-    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.models import Sequential, save_model, load_model
 
-    model = Sequential([
-        Dense(256, input_shape=x_train.shape[1:]),
-        Activation('sigmoid'),
-        Dense(128),
-        Activation('sigmoid'),
-        Dense(64),
-        Activation('sigmoid'),
-        Dense(36),
-        Activation('sigmoid')
-    ])
+    if TRAIN_OR_LOAD == "LOAD":
+        model = load_model("istreniran_model")
+    else:
+        model = Sequential([
+            Dense(576, input_shape=x_train.shape[1:]),
+            Activation('sigmoid'),
+            Dense(288),
+            Activation('sigmoid'),
+            Dense(144),
+            Activation('sigmoid'),
+            Dense(72),
+            Activation('sigmoid'),
+            Dense(36),
+            Activation('sigmoid')
+        ])
 
-    model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mean_squared_error'])
-    model.fit(x_train, y_train, epochs=50, batch_size=500)
+    model.compile(loss='mean_squared_error', optimizer='nadam', metrics=['mean_squared_error'])
+    if TRAIN_OR_LOAD == "TRAIN":
+        model.fit(x_train, y_train, epochs=100, batch_size=2000)
+        model.save('istreniran_model')
 
     scores = model.evaluate(x_train, y_train, verbose=0)
     print("Baseline Error: %.5f%%" % (100 - scores[1] * 100))
@@ -90,9 +95,9 @@ if __name__ == '__main__':  # When we call the script directly ...
                     if i == 1:
                         print(root)
                         new_element = list(np.array(line).astype(np.float))[1:-1]
-                        new_element.pop(5)
-                        new_element.pop(3)
-                        new_element.pop(0)
+                        # new_element.pop(5)
+                        # new_element.pop(3)
+                        # new_element.pop(0)
 
                         x_input = [new_element]
                         #y_res = sess.run([y], feed_dict={
