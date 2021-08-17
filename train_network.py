@@ -9,10 +9,49 @@ import re
 # The Agg backend is here for those running this on a server without X sessions
 import matplotlib
 import matplotlib.pyplot as plt
+import colour
+import colour
+import colour.plotting as cp
+import xlrd
+import scipy.interpolate as ip
+from numpy import diff
 
-TRAIN_OR_LOAD = "LOAD"
+TRAIN_OR_LOAD = "TRAIN"
+REMOVE_MEASURING_POINTS = False
 
 directory = os.path.dirname(os.path.realpath(__file__))
+
+
+def get_ref_sd(arr):
+
+    data = arr
+
+    sd = colour.SpectralDistribution(data, name='EyeOnePro')
+
+    return sd
+
+
+def get_mach_lrn_sd(folder, row, column):
+    f = open(folder + "red " + str(row) + "\\" + str(column) + "\\" + "data.txt", "r")
+    ## print(f.readline())
+    ##   # f.close()
+    data = f.read().split('\t')
+
+    #
+    #
+    ##
+    #   lambda_nm=np.asarray(data[0].split('\t')[6:], dtype=np.float32)
+
+    # nm=[380, 390, 400, 410, 420,430,440,450,460,470,480,490,500,510,520,530,540,550,560,570,580,590,600,610,620,630,640,650,660,670,680,690,700,710,720,730]
+    nm = np.linspace(380, 730, 36)  # example new x-axis
+    # print(nm)
+    #   nm=np.linspace(380, 730, 36) # example new x-axis
+    #    print(nm)
+    #   sd=0
+    data_plot = dict(zip(nm, data))
+    sd = colour.SpectralDistribution(data_plot, name='MachineLearning')  # w=np.array(measWhite)
+
+    return sd
 
 if __name__ == '__main__':  # When we call the script directly ...
     # ... we parse a potentiel --nb_neurons argument
@@ -36,9 +75,12 @@ if __name__ == '__main__':  # When we call the script directly ...
                         line = re.split(r'\t+', line.rstrip('\t'))
                         if i == 1:
                             new_element = list(np.array(line).astype(np.float))[1:-1]
-                            # new_element.pop(5)
-                            # new_element.pop(3)
-                            # new_element.pop(0)
+                            if REMOVE_MEASURING_POINTS:
+                                new_element.pop(0)
+                                new_element.pop(0)
+                                new_element.pop(0)
+                                new_element.pop(0)
+                                new_element.pop(0)
                             x_train.append(new_element)
                             if len(x_train[-1]) > 9:
                                 print(root)
@@ -70,7 +112,7 @@ if __name__ == '__main__':  # When we call the script directly ...
 
     model.compile(loss='mean_squared_error', optimizer='nadam', metrics=['mean_squared_error'])
     if TRAIN_OR_LOAD == "TRAIN":
-        model.fit(x_train, y_train, epochs=100, batch_size=2000)
+        model.fit(x_train, y_train, epochs=50, batch_size=500)
         model.save('istreniran_model')
 
     scores = model.evaluate(x_train, y_train, verbose=0)
@@ -95,9 +137,12 @@ if __name__ == '__main__':  # When we call the script directly ...
                     if i == 1:
                         print(root)
                         new_element = list(np.array(line).astype(np.float))[1:-1]
-                        # new_element.pop(5)
-                        # new_element.pop(3)
-                        # new_element.pop(0)
+                        if REMOVE_MEASURING_POINTS:
+                            new_element.pop(0)
+                            new_element.pop(0)
+                            new_element.pop(0)
+                            new_element.pop(0)
+                            new_element.pop(0)
 
                         x_input = [new_element]
                         #y_res = sess.run([y], feed_dict={
