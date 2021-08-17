@@ -16,38 +16,35 @@ import xlrd
 import scipy.interpolate as ip
 from numpy import diff
 
+cmfs = colour.STANDARD_OBSERVERS_CMFS['CIE 1931 2 Degree Standard Observer']
+#print(cmfs)
+illuminant='D65'
+sd_illuminant = colour.ILLUMINANTS_SDS[illuminant]
+
+#cp.plot_multi_sds(cmfs)
+
+illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illuminant]
+
+EPOCHS = 10
 TRAIN_OR_LOAD = "TRAIN"
 REMOVE_MEASURING_POINTS = False
 
 directory = os.path.dirname(os.path.realpath(__file__))
 
 
-def get_ref_sd(arr):
+def get_ref_sd(data):
 
-    data = arr
+    nm = np.linspace(380, 730, 36)  # example new x-axis
+    data_plot = dict(zip(nm, data))
 
-    sd = colour.SpectralDistribution(data, name='EyeOnePro')
+    sd = colour.SpectralDistribution(data_plot, name='EyeOnePro')
 
     return sd
 
 
-def get_mach_lrn_sd(folder, row, column):
-    f = open(folder + "red " + str(row) + "\\" + str(column) + "\\" + "data.txt", "r")
-    ## print(f.readline())
-    ##   # f.close()
-    data = f.read().split('\t')
-
-    #
-    #
-    ##
-    #   lambda_nm=np.asarray(data[0].split('\t')[6:], dtype=np.float32)
-
-    # nm=[380, 390, 400, 410, 420,430,440,450,460,470,480,490,500,510,520,530,540,550,560,570,580,590,600,610,620,630,640,650,660,670,680,690,700,710,720,730]
+def get_mach_lrn_sd(data):
     nm = np.linspace(380, 730, 36)  # example new x-axis
-    # print(nm)
-    #   nm=np.linspace(380, 730, 36) # example new x-axis
-    #    print(nm)
-    #   sd=0
+
     data_plot = dict(zip(nm, data))
     sd = colour.SpectralDistribution(data_plot, name='MachineLearning')  # w=np.array(measWhite)
 
@@ -112,7 +109,7 @@ if __name__ == '__main__':  # When we call the script directly ...
 
     model.compile(loss='mean_squared_error', optimizer='nadam', metrics=['mean_squared_error'])
     if TRAIN_OR_LOAD == "TRAIN":
-        model.fit(x_train, y_train, epochs=50, batch_size=500)
+        model.fit(x_train, y_train, epochs=EPOCHS, batch_size=500)
         model.save('istreniran_model')
 
     scores = model.evaluate(x_train, y_train, verbose=0)
@@ -172,6 +169,18 @@ if __name__ == '__main__':  # When we call the script directly ...
                     elif i == 3:
                         izlaz = np.array(line).astype(np.float)
                         izlaz = np.squeeze(izlaz)
+
+                        XYZ_ref = colour.sd_to_XYZ(get_ref_sd(izlaz), cmfs, sd_illuminant)
+                        Lab_ref = colour.XYZ_to_Lab(XYZ_ref / 100, illuminant_xy)
+
+                        XYZ_machinelearning = colour.sd_to_XYZ(get_mach_lrn_sd(mreza), cmfs, sd_illuminant)
+                        Lab_machinelearning = colour.XYZ_to_Lab(XYZ_machinelearning / 100, illuminant_xy)
+
+                        print("Lab Racunato - EyeOnePro =", Lab_ref)
+                        print("Lab Racunato - MachineLearning    =", Lab_machinelearning)
+
+                        de = colour.delta_E(Lab_ref, Lab_machinelearning, method='CIE 2000')
+                        print("deltaE ref VS Machine_Learning = ", de)
 
                         plt.plot(mreza)
                         plt.plot(izlaz)
