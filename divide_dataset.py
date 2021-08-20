@@ -1,4 +1,4 @@
-yourpath = '../'
+yourpath = 'dataset/sjajni'
 
 import os
 for root, dirs, files in os.walk(yourpath, topdown=True):

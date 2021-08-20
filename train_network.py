@@ -10,7 +10,6 @@ import re
 import matplotlib
 import matplotlib.pyplot as plt
 import colour
-import colour
 import colour.plotting as cp
 import xlrd
 import scipy.interpolate as ip
@@ -25,11 +24,16 @@ sd_illuminant = colour.ILLUMINANTS_SDS[illuminant]
 
 illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illuminant]
 
-EPOCHS = 10
-TRAIN_OR_LOAD = "TRAIN"
+EPOCHS = 500
+BATCH = 50
+#TRAIN_OR_LOAD = "LOAD"
+TRAIN = True
+LOAD = True
 REMOVE_MEASURING_POINTS = False
 
 directory = os.path.dirname(os.path.realpath(__file__))
+
+des = []
 
 
 def get_ref_sd(data):
@@ -58,9 +62,12 @@ if __name__ == '__main__':  # When we call the script directly ...
     x_train = []
     y_train = []
 
-    print('Training our universal approximator')
+    if TRAIN:
+        print('Training our universal approximator')
+    if LOAD:
+        print('Loading pre-trained network')
     for i in range(100):
-        for root, dirs, files in os.walk("./dataset/sve/", topdown=True):
+        for root, dirs, files in os.walk("./dataset/staro/trening_dodatni_tamni/", topdown=True):
             for name in files:
                 # print("Name = ", root)
                 if name == "data.txt":
@@ -73,11 +80,11 @@ if __name__ == '__main__':  # When we call the script directly ...
                         if i == 1:
                             new_element = list(np.array(line).astype(np.float))[1:-1]
                             if REMOVE_MEASURING_POINTS:
+                                new_element.pop(5)
+                                new_element.pop(3)
+                                new_element.pop(2)
                                 new_element.pop(0)
-                                new_element.pop(0)
-                                new_element.pop(0)
-                                new_element.pop(0)
-                                new_element.pop(0)
+
                             x_train.append(new_element)
                             if len(x_train[-1]) > 9:
                                 print(root)
@@ -91,9 +98,11 @@ if __name__ == '__main__':  # When we call the script directly ...
     from tensorflow.keras.layers import Dense, Activation
     from tensorflow.keras.models import Sequential, save_model, load_model
 
-    if TRAIN_OR_LOAD == "LOAD":
+    if LOAD:
         model = load_model("istreniran_model")
+        print("Loaded old network")
     else:
+        print("Created new network")
         model = Sequential([
             Dense(576, input_shape=x_train.shape[1:]),
             Activation('sigmoid'),
@@ -108,8 +117,8 @@ if __name__ == '__main__':  # When we call the script directly ...
         ])
 
     model.compile(loss='mean_squared_error', optimizer='nadam', metrics=['mean_squared_error'])
-    if TRAIN_OR_LOAD == "TRAIN":
-        model.fit(x_train, y_train, epochs=EPOCHS, batch_size=500)
+    if TRAIN:
+        model.fit(x_train, y_train, epochs=EPOCHS, batch_size=BATCH)
         model.save('istreniran_model')
 
     scores = model.evaluate(x_train, y_train, verbose=0)
@@ -119,7 +128,7 @@ if __name__ == '__main__':  # When we call the script directly ...
 
     x_train = []
     y_train = []
-    for root, dirs, files in os.walk("./dataset/test/", topdown=True):
+    for root, dirs, files in os.walk("./dataset/staro/test/", topdown=True):
         for name in files:
             # print("Name = ", root)
             if name == "data.txt":
@@ -135,10 +144,9 @@ if __name__ == '__main__':  # When we call the script directly ...
                         print(root)
                         new_element = list(np.array(line).astype(np.float))[1:-1]
                         if REMOVE_MEASURING_POINTS:
-                            new_element.pop(0)
-                            new_element.pop(0)
-                            new_element.pop(0)
-                            new_element.pop(0)
+                            new_element.pop(5)
+                            new_element.pop(3)
+                            new_element.pop(2)
                             new_element.pop(0)
 
                         x_input = [new_element]
@@ -180,11 +188,18 @@ if __name__ == '__main__':  # When we call the script directly ...
                         print("Lab Racunato - MachineLearning    =", Lab_machinelearning)
 
                         de = colour.delta_E(Lab_ref, Lab_machinelearning, method='CIE 2000')
+                        des.append(de)
                         print("deltaE ref VS Machine_Learning = ", de)
 
                         plt.plot(mreza)
                         plt.plot(izlaz)
-                        plt.show()
+                        #plt.show()
+
+    print("Delta Es : ", des)
+    print("Average = ", np.average(des))
+    print("Max = ", np.max(des))
+    print("Min = ", np.min(des))
+
 
     # Finally we save the graph to check that it looks like what we wanted
     #saver.save(sess, result_folder + '/data.chkp')
