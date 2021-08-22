@@ -24,10 +24,10 @@ sd_illuminant = colour.ILLUMINANTS_SDS[illuminant]
 
 illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illuminant]
 
-EPOCHS = 500
-BATCH = 50
+EPOCHS = 1000
+BATCH = 250
 #TRAIN_OR_LOAD = "LOAD"
-TRAIN = True
+TRAIN = False
 LOAD = True
 REMOVE_MEASURING_POINTS = False
 
@@ -67,7 +67,7 @@ if __name__ == '__main__':  # When we call the script directly ...
     if LOAD:
         print('Loading pre-trained network')
     for i in range(100):
-        for root, dirs, files in os.walk("./dataset/staro/trening_dodatni_tamni/", topdown=True):
+        for root, dirs, files in os.walk("./dataset/novi_dataset_pazljivo izdvajanje/batke/", topdown=True):
             for name in files:
                 # print("Name = ", root)
                 if name == "data.txt":
@@ -80,9 +80,9 @@ if __name__ == '__main__':  # When we call the script directly ...
                         if i == 1:
                             new_element = list(np.array(line).astype(np.float))[1:-1]
                             if REMOVE_MEASURING_POINTS:
-                                new_element.pop(5)
-                                new_element.pop(3)
-                                new_element.pop(2)
+                                #new_element.pop(5)
+                                #new_element.pop(3)
+                                #new_element.pop(2)
                                 new_element.pop(0)
 
                             x_train.append(new_element)
@@ -99,18 +99,18 @@ if __name__ == '__main__':  # When we call the script directly ...
     from tensorflow.keras.models import Sequential, save_model, load_model
 
     if LOAD:
-        model = load_model("istreniran_model")
+        model = load_model("./istrenirani_modeli/istreniran_model_6/")
         print("Loaded old network")
     else:
         print("Created new network")
         model = Sequential([
-            Dense(576, input_shape=x_train.shape[1:]),
-            Activation('sigmoid'),
-            Dense(288),
-            Activation('sigmoid'),
-            Dense(144),
-            Activation('sigmoid'),
-            Dense(72),
+            #Dense(576, input_shape=x_train.shape[1:]),
+            #Activation('sigmoid'),
+            #Dense(288),
+            #Activation('sigmoid'),
+            #Dense(144, input_shape=x_train.shape[1:]),
+            #Activation('sigmoid'),
+            Dense(72, input_shape=x_train.shape[1:]),
             Activation('sigmoid'),
             Dense(36),
             Activation('sigmoid')
@@ -118,17 +118,20 @@ if __name__ == '__main__':  # When we call the script directly ...
 
     model.compile(loss='mean_squared_error', optimizer='nadam', metrics=['mean_squared_error'])
     if TRAIN:
-        model.fit(x_train, y_train, epochs=EPOCHS, batch_size=BATCH)
-        model.save('istreniran_model')
+        for i in range(int(EPOCHS/100)):
+            print("Trening "+str(i)+" od "+str(int(EPOCHS/100)))
+            model.fit(x_train, y_train, verbose=1, epochs=100, batch_size=BATCH)
+            model.save('./istrenirani_modeli/istreniran_model_'+str(i))
 
-    scores = model.evaluate(x_train, y_train, verbose=0)
-    print("Baseline Error: %.5f%%" % (100 - scores[1] * 100))
+            scores = model.evaluate(x_train, y_train, verbose=0)
+            print(str(i) + " ->   Baseline Error: %.5f%%" % (100 - scores[1] * 100))
 
     print('Calculating result')
 
     x_train = []
     y_train = []
-    for root, dirs, files in os.walk("./dataset/staro/test/", topdown=True):
+    broj_grafika = 0
+    for root, dirs, files in os.walk("./dataset/novi_dataset_pazljivo izdvajanje/test/", topdown=True):
         for name in files:
             # print("Name = ", root)
             if name == "data.txt":
@@ -144,9 +147,9 @@ if __name__ == '__main__':  # When we call the script directly ...
                         print(root)
                         new_element = list(np.array(line).astype(np.float))[1:-1]
                         if REMOVE_MEASURING_POINTS:
-                            new_element.pop(5)
-                            new_element.pop(3)
-                            new_element.pop(2)
+                            #new_element.pop(5)
+                            #new_element.pop(3)
+                            #new_element.pop(2)
                             new_element.pop(0)
 
                         x_input = [new_element]
@@ -193,9 +196,13 @@ if __name__ == '__main__':  # When we call the script directly ...
 
                         plt.plot(mreza)
                         plt.plot(izlaz)
-                        #plt.show()
+                        if broj_grafika < 5:
+                            #plt.show()
+                            broj_grafika += 1
 
     print("Delta Es : ", des)
+    des.sort(reverse=True)
+    print("Sorted D Es: ", des)
     print("Average = ", np.average(des))
     print("Max = ", np.max(des))
     print("Min = ", np.min(des))
