@@ -24,12 +24,17 @@ sd_illuminant = colour.ILLUMINANTS_SDS[illuminant]
 
 illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illuminant]
 
-EPOCHS = 1000
+EPOCHS = 800
 BATCH = 250
 #TRAIN_OR_LOAD = "LOAD"
-TRAIN = False
+TRAIN = True
 LOAD = True
-REMOVE_MEASURING_POINTS = False
+
+number_of_diodes = 6
+if number_of_diodes < 6:
+    REMOVE_MEASURING_POINTS = True
+else:
+    REMOVE_MEASURING_POINTS = False
 
 directory = os.path.dirname(os.path.realpath(__file__))
 
@@ -67,7 +72,7 @@ if __name__ == '__main__':  # When we call the script directly ...
     if LOAD:
         print('Loading pre-trained network')
     for i in range(100):
-        for root, dirs, files in os.walk("./dataset/novi_dataset_pazljivo izdvajanje/batke/", topdown=True):
+        for root, dirs, files in os.walk("./dataset/sjajni/trening/", topdown=True):
             for name in files:
                 # print("Name = ", root)
                 if name == "data.txt":
@@ -80,10 +85,15 @@ if __name__ == '__main__':  # When we call the script directly ...
                         if i == 1:
                             new_element = list(np.array(line).astype(np.float))[1:-1]
                             if REMOVE_MEASURING_POINTS:
-                                #new_element.pop(5)
-                                #new_element.pop(3)
-                                #new_element.pop(2)
-                                new_element.pop(0)
+                                if number_of_diodes == 5:
+                                    new_element.pop(0)
+                                elif number_of_diodes == 4:
+                                    new_element.pop(5)
+                                    new_element.pop(0)
+                                elif number_of_diodes == 3:
+                                    new_element.pop(5)
+                                    new_element.pop(3)
+                                    new_element.pop(0)
 
                             x_train.append(new_element)
                             if len(x_train[-1]) > 9:
@@ -99,7 +109,15 @@ if __name__ == '__main__':  # When we call the script directly ...
     from tensorflow.keras.models import Sequential, save_model, load_model
 
     if LOAD:
-        model = load_model("./istrenirani_modeli/istreniran_model_6/")
+        if number_of_diodes == 5:
+            putanja_modela = "./istrenirani_modeli/5_dioda/"
+        elif number_of_diodes == 4:
+            putanja_modela = "./istrenirani_modeli/4_diode/"
+        elif number_of_diodes == 3:
+            putanja_modela = "./istrenirani_modeli/3_diode/"
+        else:
+            putanja_modela = "./istrenirani_modeli/istreniran_model_sjajni_Poslednje/"
+        model = load_model(putanja_modela)
         print("Loaded old network")
     else:
         print("Created new network")
@@ -131,7 +149,7 @@ if __name__ == '__main__':  # When we call the script directly ...
     x_train = []
     y_train = []
     broj_grafika = 0
-    for root, dirs, files in os.walk("./dataset/novi_dataset_pazljivo izdvajanje/test/", topdown=True):
+    for root, dirs, files in os.walk("./dataset/sjajni/test/", topdown=True):
         for name in files:
             # print("Name = ", root)
             if name == "data.txt":
@@ -147,10 +165,15 @@ if __name__ == '__main__':  # When we call the script directly ...
                         print(root)
                         new_element = list(np.array(line).astype(np.float))[1:-1]
                         if REMOVE_MEASURING_POINTS:
-                            #new_element.pop(5)
-                            #new_element.pop(3)
-                            #new_element.pop(2)
-                            new_element.pop(0)
+                            if number_of_diodes == 5:
+                                new_element.pop(0)
+                            elif number_of_diodes == 4:
+                                new_element.pop(5)
+                                new_element.pop(0)
+                            elif number_of_diodes == 3:
+                                new_element.pop(5)
+                                new_element.pop(3)
+                                new_element.pop(0)
 
                         x_input = [new_element]
                         #y_res = sess.run([y], feed_dict={
@@ -166,11 +189,11 @@ if __name__ == '__main__':  # When we call the script directly ...
 
                         f_data = open(os.path.join(new_dir, "data.txt"), "w")
 
-                        f_data.writelines("neural_network_result\n")
+                        #f_data.writelines("neural_network_result\n")
                         tmp_str = ""
-                        for number in y_res[0]:
+                        for number in y_res[0][0]:
                             tmp_str += str(number)
-                            tmp_str += ","
+                            tmp_str += " "
                         f_data.writelines(tmp_str[0:-1])
                         mreza = np.squeeze(y_res)
                         from scipy.signal import savgol_filter
