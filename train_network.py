@@ -24,13 +24,15 @@ sd_illuminant = colour.ILLUMINANTS_SDS[illuminant]
 
 illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illuminant]
 
-EPOCHS = 800
+EPOCHS = 50000
 BATCH = 250
 #TRAIN_OR_LOAD = "LOAD"
-TRAIN = True
+TRAIN = False
 LOAD = True
 
-number_of_diodes = 6
+NUM_CHECK = 8
+
+number_of_diodes = 2
 if number_of_diodes < 6:
     REMOVE_MEASURING_POINTS = True
 else:
@@ -72,7 +74,7 @@ if __name__ == '__main__':  # When we call the script directly ...
     if LOAD:
         print('Loading pre-trained network')
     for i in range(100):
-        for root, dirs, files in os.walk("./dataset/sjajni/trening/", topdown=True):
+        for root, dirs, files in os.walk("./dataset/novi_dataset_pazljivo izdvajanje/batke", topdown=True):
             for name in files:
                 # print("Name = ", root)
                 if name == "data.txt":
@@ -93,6 +95,11 @@ if __name__ == '__main__':  # When we call the script directly ...
                                 elif number_of_diodes == 3:
                                     new_element.pop(5)
                                     new_element.pop(3)
+                                    new_element.pop(0)
+                                elif number_of_diodes == 2:
+                                    new_element.pop(5)
+                                    new_element.pop(4)
+                                    new_element.pop(2)
                                     new_element.pop(0)
 
                             x_train.append(new_element)
@@ -116,19 +123,19 @@ if __name__ == '__main__':  # When we call the script directly ...
         elif number_of_diodes == 3:
             putanja_modela = "./istrenirani_modeli/3_diode/"
         else:
-            putanja_modela = "./istrenirani_modeli/istreniran_model_sjajni_Poslednje/"
+            putanja_modela = "./istrenirani_modeli/istreniran_model_19/"
         model = load_model(putanja_modela)
         print("Loaded old network")
     else:
         print("Created new network")
         model = Sequential([
-            #Dense(576, input_shape=x_train.shape[1:]),
+            #Dense(576),
             #Activation('sigmoid'),
             #Dense(288),
             #Activation('sigmoid'),
-            #Dense(144, input_shape=x_train.shape[1:]),
-            #Activation('sigmoid'),
-            Dense(72, input_shape=x_train.shape[1:]),
+            Dense(144, input_shape=x_train.shape[1:]),
+            Activation('sigmoid'),
+            Dense(72),
             Activation('sigmoid'),
             Dense(36),
             Activation('sigmoid')
@@ -144,95 +151,128 @@ if __name__ == '__main__':  # When we call the script directly ...
             scores = model.evaluate(x_train, y_train, verbose=0)
             print(str(i) + " ->   Baseline Error: %.5f%%" % (100 - scores[1] * 100))
 
-    print('Calculating result')
+    else:
+        ukupno_avg = []
+        ukupno_max = []
+        ukupno_min = []
+        for i in range(0, NUM_CHECK):
+            putanja_modela = "./istrenirani_modeli/istreniran_model_"+str(i)+"/"
+            print("Racunanje za ", putanja_modela)
+            model = load_model(putanja_modela)
+            model.compile(loss='mean_squared_error', optimizer='nadam', metrics=['mean_squared_error'])
 
-    x_train = []
-    y_train = []
-    broj_grafika = 0
-    for root, dirs, files in os.walk("./dataset/sjajni/test/", topdown=True):
-        for name in files:
-            # print("Name = ", root)
-            if name == "data.txt":
+            print('Calculating result')
 
-                f_data = open(os.path.join(root, "data.txt"), "r")
-                mreza = None
-                izlaz = None
+            x_train = []
+            y_train = []
+            broj_grafika = 0
+            for root, dirs, files in os.walk("./dataset/novi_dataset_pazljivo izdvajanje/test/", topdown=True):
+                for name in files:
+                    # print("Name = ", root)
+                    if name == "data.txt":
 
-                for i, line in enumerate(f_data):
-                    line = line.strip('\n')
-                    line = re.split(r'\t+', line.rstrip('\t'))
-                    if i == 1:
-                        print(root)
-                        new_element = list(np.array(line).astype(np.float))[1:-1]
-                        if REMOVE_MEASURING_POINTS:
-                            if number_of_diodes == 5:
-                                new_element.pop(0)
-                            elif number_of_diodes == 4:
-                                new_element.pop(5)
-                                new_element.pop(0)
-                            elif number_of_diodes == 3:
-                                new_element.pop(5)
-                                new_element.pop(3)
-                                new_element.pop(0)
+                        f_data = open(os.path.join(root, "data.txt"), "r")
+                        mreza = None
+                        izlaz = None
 
-                        x_input = [new_element]
-                        #y_res = sess.run([y], feed_dict={
-                        #    x: x_input
-                        #})
-                        y_res = model.predict([x_input])
+                        for i, line in enumerate(f_data):
+                            line = line.strip('\n')
+                            line = re.split(r'\t+', line.rstrip('\t'))
+                            if i == 1:
+                                #print(root)
+                                new_element = list(np.array(line).astype(np.float))[1:-1]
+                                if REMOVE_MEASURING_POINTS:
+                                    if number_of_diodes == 5:
+                                        new_element.pop(0)
+                                    elif number_of_diodes == 4:
+                                        new_element.pop(5)
+                                        new_element.pop(0)
+                                    elif number_of_diodes == 3:
+                                        new_element.pop(5)
+                                        new_element.pop(3)
+                                        new_element.pop(0)
+                                    elif number_of_diodes == 2:
+                                        new_element.pop(5)
+                                        new_element.pop(3)
+                                        new_element.pop(1)
+                                        new_element.pop(0)
 
-                        print("Input: ", x_input)
-                        print("y_out: ", y_res)
-                        new_dir = os.path.join("./test_results/" + root[11:])
-                        if not os.path.exists(new_dir):
-                            os.makedirs(new_dir)
+                                x_input = [new_element]
+                                #y_res = sess.run([y], feed_dict={
+                                #    x: x_input
+                                #})
+                                y_res = model.predict([x_input])
 
-                        f_data = open(os.path.join(new_dir, "data.txt"), "w")
+                                #print("Input: ", x_input)
+                                #print("y_out: ", y_res)
+                                new_dir = os.path.join("./test_results/" + root[11:])
+                                if not os.path.exists(new_dir):
+                                    os.makedirs(new_dir)
 
-                        #f_data.writelines("neural_network_result\n")
-                        tmp_str = ""
-                        for number in y_res[0][0]:
-                            tmp_str += str(number)
-                            tmp_str += " "
-                        f_data.writelines(tmp_str[0:-1])
-                        mreza = np.squeeze(y_res)
-                        from scipy.signal import savgol_filter
+                                f_data = open(os.path.join(new_dir, "data.txt"), "w")
 
-                        # yhat = savgol_filter(mreza, 21, 5)
+                                #f_data.writelines("neural_network_result\n")
+                                tmp_str = ""
+                                for number in y_res[0][0]:
+                                    tmp_str += str(number)
+                                    tmp_str += " "
+                                f_data.writelines(tmp_str[0:-1])
+                                mreza = np.squeeze(y_res)
+                                from scipy.signal import savgol_filter
 
-                    elif i == 3:
-                        izlaz = np.array(line).astype(np.float)
-                        izlaz = np.squeeze(izlaz)
+                                # yhat = savgol_filter(mreza, 21, 5)
 
-                        XYZ_ref = colour.sd_to_XYZ(get_ref_sd(izlaz), cmfs, sd_illuminant)
-                        Lab_ref = colour.XYZ_to_Lab(XYZ_ref / 100, illuminant_xy)
+                            elif i == 3:
+                                izlaz = np.array(line).astype(np.float)
+                                izlaz = np.squeeze(izlaz)
 
-                        XYZ_machinelearning = colour.sd_to_XYZ(get_mach_lrn_sd(mreza), cmfs, sd_illuminant)
-                        Lab_machinelearning = colour.XYZ_to_Lab(XYZ_machinelearning / 100, illuminant_xy)
+                                XYZ_ref = colour.sd_to_XYZ(get_ref_sd(izlaz), cmfs, sd_illuminant)
+                                Lab_ref = colour.XYZ_to_Lab(XYZ_ref / 100, illuminant_xy)
 
-                        print("Lab Racunato - EyeOnePro =", Lab_ref)
-                        print("Lab Racunato - MachineLearning    =", Lab_machinelearning)
+                                XYZ_machinelearning = colour.sd_to_XYZ(get_mach_lrn_sd(mreza), cmfs, sd_illuminant)
+                                Lab_machinelearning = colour.XYZ_to_Lab(XYZ_machinelearning / 100, illuminant_xy)
 
-                        de = colour.delta_E(Lab_ref, Lab_machinelearning, method='CIE 2000')
-                        des.append(de)
-                        print("deltaE ref VS Machine_Learning = ", de)
+                                #print("Lab Racunato - EyeOnePro =", Lab_ref)
+                                #print("Lab Racunato - MachineLearning    =", Lab_machinelearning)
 
-                        plt.plot(mreza)
-                        plt.plot(izlaz)
-                        if broj_grafika < 5:
-                            #plt.show()
-                            broj_grafika += 1
+                                de = colour.delta_E(Lab_ref, Lab_machinelearning, method='CIE 2000')
+                                des.append(de)
+                                #print("deltaE ref VS Machine_Learning = ", de)
 
-    print("Delta Es : ", des)
-    des.sort(reverse=True)
-    print("Sorted D Es: ", des)
-    print("Average = ", np.average(des))
-    print("Max = ", np.max(des))
-    print("Min = ", np.min(des))
+                                #plt.plot(mreza)
+                                #plt.plot(x_input)
+                                #plt.plot(izlaz)
+                                if broj_grafika < 5:
+                                    #plt.show()
+                                    broj_grafika += 1
+
+            ukupno_avg.append(np.average(des))
+            ukupno_max.append(np.max(des))
+            ukupno_min.append(np.min(des))
+
+            #print("Delta Es : ", des)
+            des.sort(reverse=True)
+            #print("Sorted D Es: ", des)
+            print("Average = ", np.average(des))
+            print("Max = ", np.max(des))
+            print("Min = ", np.min(des))
 
 
     # Finally we save the graph to check that it looks like what we wanted
     #saver.save(sess, result_folder + '/data.chkp')
 
+        print("Ukupno Average = ", ukupno_avg)
+        print("Ukupno Max = ", ukupno_max)
+        print("Ukupno Min = ", ukupno_min)
 
-
+        fig1 = plt.figure()
+        avgplot = fig1.add_subplot(1, 3, 1)
+        avgplot.title.set_text("Average")
+        maxplot = fig1.add_subplot(1, 3, 2)
+        maxplot.title.set_text("Max")
+        minplot = fig1.add_subplot(1, 3, 3)
+        minplot.title.set_text("Min")
+        avgplot.plot(ukupno_avg)
+        maxplot.plot(ukupno_max)
+        minplot.plot(ukupno_min)
+        plt.show()
