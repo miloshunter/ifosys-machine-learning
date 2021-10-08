@@ -1,6 +1,7 @@
 import time, os, argparse, io
 # Tensorflow and numpy!
 import tensorflow.keras.models
+import tensorflow as tf
 from tensorflow.keras import optimizers
 import numpy as np
 import re
@@ -25,14 +26,20 @@ sd_illuminant = colour.ILLUMINANTS_SDS[illuminant]
 illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illuminant]
 
 EPOCHS = 50000
-BATCH = 250
+BATCH = 5000 #420
 #TRAIN_OR_LOAD = "LOAD"
 TRAIN = False
+
 LOAD = True
+LOAD_NUM = 50
+LOAD_NAME = "./istrenirani_modeli/istreniran_model_"+str(LOAD_NUM)+"/"
 
-NUM_CHECK = 8
+TEST = True
 
-number_of_diodes = 2
+NUM_CHECK = 65
+NUM_COPY_TRAIN = 100
+
+number_of_diodes = 6
 if number_of_diodes < 6:
     REMOVE_MEASURING_POINTS = True
 else:
@@ -73,57 +80,53 @@ if __name__ == '__main__':  # When we call the script directly ...
         print('Training our universal approximator')
     if LOAD:
         print('Loading pre-trained network')
-    for i in range(100):
-        for root, dirs, files in os.walk("./dataset/novi_dataset_pazljivo izdvajanje/batke", topdown=True):
-            for name in files:
-                # print("Name = ", root)
-                if name == "data.txt":
+    for root, dirs, files in os.walk("./dataset/za_rad/trening_dodatni_tamni/", topdown=True):
+        for name in files:
+            # print("Name = ", root)
+            if name == "data.txt":
 
-                    f_data = open(os.path.join(root, "data.txt"), "r")
+                f_data = open(os.path.join(root, "data.txt"), "r")
 
-                    for i, line in enumerate(f_data):
-                        line = line.strip('\n')
-                        line = re.split(r'\t+', line.rstrip('\t'))
-                        if i == 1:
-                            new_element = list(np.array(line).astype(np.float))[1:-1]
-                            if REMOVE_MEASURING_POINTS:
-                                if number_of_diodes == 5:
-                                    new_element.pop(0)
-                                elif number_of_diodes == 4:
-                                    new_element.pop(5)
-                                    new_element.pop(0)
-                                elif number_of_diodes == 3:
-                                    new_element.pop(5)
-                                    new_element.pop(3)
-                                    new_element.pop(0)
-                                elif number_of_diodes == 2:
-                                    new_element.pop(5)
-                                    new_element.pop(4)
-                                    new_element.pop(2)
-                                    new_element.pop(0)
+                for i, line in enumerate(f_data):
+                    line = line.strip('\n')
+                    line = re.split(r'\t+', line.rstrip('\t'))
+                    if i == 1:
+                        new_element = list(np.array(line).astype(np.float))[1:-1]
+                        if REMOVE_MEASURING_POINTS:
+                            if number_of_diodes == 5:
+                                new_element.pop(0)
+                            elif number_of_diodes == 4:
+                                new_element.pop(5)
+                                new_element.pop(0)
+                            elif number_of_diodes == 3:
+                                new_element.pop(5)
+                                new_element.pop(3)
+                                new_element.pop(0)
+                            elif number_of_diodes == 2:
+                                new_element.pop(5)
+                                new_element.pop(4)
+                                new_element.pop(2)
+                                new_element.pop(0)
 
-                            x_train.append(new_element)
-                            if len(x_train[-1]) > 9:
-                                print(root)
-                                exit()
-                        elif i == 3:
-                            y_train.append(list(np.array(line).astype(np.float)))
+                        x_train.append(new_element)
+                        if len(x_train[-1]) > 9:
+                            print(root)
+                            exit()
+                    elif i == 3:
+                        y_train.append(list(np.array(line).astype(np.float)))
 
     x_train = np.asarray(x_train)
-    y_train = np.asarray(y_train)
+    x_train = np.vstack([x_train]*NUM_COPY_TRAIN)
 
-    from tensorflow.keras.layers import Dense, Activation
+    y_train = np.asarray(y_train)
+    y_train = np.vstack([y_train]*NUM_COPY_TRAIN)
+
+    from tensorflow.keras.layers import Dense, Activation, Dropout
+    from tensorflow.keras.initializers import GlorotNormal, GlorotUniform, RandomUniform
     from tensorflow.keras.models import Sequential, save_model, load_model
 
     if LOAD:
-        if number_of_diodes == 5:
-            putanja_modela = "./istrenirani_modeli/5_dioda/"
-        elif number_of_diodes == 4:
-            putanja_modela = "./istrenirani_modeli/4_diode/"
-        elif number_of_diodes == 3:
-            putanja_modela = "./istrenirani_modeli/3_diode/"
-        else:
-            putanja_modela = "./istrenirani_modeli/istreniran_model_19/"
+        putanja_modela = LOAD_NAME
         model = load_model(putanja_modela)
         print("Loaded old network")
     else:
@@ -133,29 +136,26 @@ if __name__ == '__main__':  # When we call the script directly ...
             #Activation('sigmoid'),
             #Dense(288),
             #Activation('sigmoid'),
-            Dense(144, input_shape=x_train.shape[1:]),
-            Activation('sigmoid'),
-            Dense(72),
-            Activation('sigmoid'),
-            Dense(36),
-            Activation('sigmoid')
+            #Dense(144, activation='relu'),
+            Dense(72, activation='sigmoid', input_shape=x_train.shape[1:]),
+            Dense(36, activation='sigmoid'),
         ])
 
     model.compile(loss='mean_squared_error', optimizer='nadam', metrics=['mean_squared_error'])
     if TRAIN:
-        for i in range(int(EPOCHS/100)):
-            print("Trening "+str(i)+" od "+str(int(EPOCHS/100)))
-            model.fit(x_train, y_train, verbose=1, epochs=100, batch_size=BATCH)
+        for i in range(LOAD_NUM, LOAD_NUM+int(EPOCHS/1000)):
+            print("Trening "+str(i)+" od "+str(int(EPOCHS/1000)+LOAD_NUM))
+            model.fit(x_train, y_train, verbose=1, epochs=1000, batch_size=BATCH)
             model.save('./istrenirani_modeli/istreniran_model_'+str(i))
 
             scores = model.evaluate(x_train, y_train, verbose=0)
             print(str(i) + " ->   Baseline Error: %.5f%%" % (100 - scores[1] * 100))
 
-    else:
+    if TEST:
         ukupno_avg = []
         ukupno_max = []
         ukupno_min = []
-        for i in range(0, NUM_CHECK):
+        for i in range(LOAD_NUM, NUM_CHECK):
             putanja_modela = "./istrenirani_modeli/istreniran_model_"+str(i)+"/"
             print("Racunanje za ", putanja_modela)
             model = load_model(putanja_modela)
@@ -165,8 +165,9 @@ if __name__ == '__main__':  # When we call the script directly ...
 
             x_train = []
             y_train = []
+            des = []
             broj_grafika = 0
-            for root, dirs, files in os.walk("./dataset/novi_dataset_pazljivo izdvajanje/test/", topdown=True):
+            for root, dirs, files in os.walk("./dataset/za_rad/test/", topdown=True):
                 for name in files:
                     # print("Name = ", root)
                     if name == "data.txt":
@@ -261,9 +262,9 @@ if __name__ == '__main__':  # When we call the script directly ...
     # Finally we save the graph to check that it looks like what we wanted
     #saver.save(sess, result_folder + '/data.chkp')
 
-        print("Ukupno Average = ", ukupno_avg)
-        print("Ukupno Max = ", ukupno_max)
-        print("Ukupno Min = ", ukupno_min)
+        print("Ukupno Average = ", np.min(ukupno_avg))
+        print("Ukupno Max = ", np.min(ukupno_max))
+        print("Ukupno Min = ", np.min(ukupno_max))
 
         fig1 = plt.figure()
         avgplot = fig1.add_subplot(1, 3, 1)
