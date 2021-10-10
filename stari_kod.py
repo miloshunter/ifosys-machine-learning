@@ -9,8 +9,11 @@ import re
 # The Agg backend is here for those running this on a server without X sessions
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import colour
 import colour
+from colormath.color_objects import sRGBColor, XYZColor
+from colormath.color_conversions import convert_color
 import colour.plotting as cp
 import xlrd
 import scipy.interpolate as ip
@@ -28,10 +31,11 @@ illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illumina
 EPOCHS = 35
 BATCH = 250
 TRAIN_OR_LOAD = "LOAD"
-LOAD_NUM = 49
-LOAD_NAME = "./istrenirani_modeli/istreniran_model_"+str(LOAD_NUM)+"/"
+LOAD_NUM = 21
+LOAD_NAME = "./istrenirani_modeli/sa_kaggle/6_diode/istrenirani_modeli/istreniran_model_6_"+str(LOAD_NUM)+"/"
+#LOAD_NAME = "./istrenirani_modeli/isteniran_model_99"
 REMOVE_MEASURING_POINTS = False
-
+PLOT = False
 directory = os.path.dirname(os.path.realpath(__file__))
 
 des = []
@@ -143,6 +147,8 @@ if __name__ == '__main__':  # When we call the script directly ...
             if name == "data.txt":
 
                 f_data = open(os.path.join(root, "data.txt"), "r")
+                #f_data = open("./dataset/za_rad/test/red 10/42/data.txt")
+                #f_data = open("./dataset/za_rad/sve_zajedno/red 18/37/data.txt")
                 mreza = None
                 izlaz = None
 
@@ -189,7 +195,11 @@ if __name__ == '__main__':  # When we call the script directly ...
 
                         XYZ_ref = colour.sd_to_XYZ(get_ref_sd(izlaz), cmfs, sd_illuminant)
                         Lab_ref = colour.XYZ_to_Lab(XYZ_ref / 100, illuminant_xy)
-
+                        xyz = XYZColor(*[component / 100 for component in XYZ_ref])
+                        rgb = convert_color(xyz, sRGBColor)
+                        rgb_list = [1 * color for color in rgb.get_value_tuple()]
+                        RGB_ref = rgb_list
+                        RGB_ref = np.clip(RGB_ref, 0, 1)
                         XYZ_machinelearning = colour.sd_to_XYZ(get_mach_lrn_sd(mreza), cmfs, sd_illuminant)
                         Lab_machinelearning = colour.XYZ_to_Lab(XYZ_machinelearning / 100, illuminant_xy)
 
@@ -199,13 +209,23 @@ if __name__ == '__main__':  # When we call the script directly ...
                         de = colour.delta_E(Lab_ref, Lab_machinelearning, method='CIE 2000')
                         des.append(de)
                         print("deltaE ref VS Machine_Learning = ", de)
+                        if PLOT: #Should i PLOT
+                            ax = plt.subplot()
+                            plt.xlabel("Wavelength [nm]")
+                            plt.ylabel("Spectral Distribution [arb. dim.]")
+                            plt.title(root[26:]+"   de = "+"{:.2f}".format(de))
+                            nm = np.asarray(np.linspace(380, 730, 36))  # example new x-axis
+                            plt.plot([400, 457, 517, 572, 632, 700],
+                                     new_element, 'bo', label='Measurement points')
 
-                        plt.plot([1.97260273972603,	7.59452054794521, 13.5123287671233, 18.9369863013699, 24.8547945205479, 31.5616438356164],
-                                 new_element, 'ko')
-
-                        plt.plot(mreza, '--')
-                        plt.plot(izlaz, '-.')
-                        #plt.show()
+                            plt.plot(nm, mreza, '--', label='Estimated spectrum')
+                            plt.plot(nm, izlaz, '-.', label='Referent spectrum')
+                            col_patch = mpatches.Patch(label='Color patch')
+                            col_patch.set_color(RGB_ref)
+                            handles, labels = ax.get_legend_handles_labels()
+                            handles.append(col_patch)
+                            plt.legend(handles=handles)
+                            plt.show()
 
     print("Delta Es : ", des)
     des.sort(reverse=True)
