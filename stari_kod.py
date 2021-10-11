@@ -3,6 +3,7 @@ import time, os, argparse, io
 import tensorflow.keras.models
 from tensorflow.keras import optimizers
 import numpy as np
+import statistics
 import re
 
 # Matplotlib, so we can graph our functions
@@ -23,7 +24,7 @@ cmfs = colour.STANDARD_OBSERVERS_CMFS['CIE 1931 2 Degree Standard Observer']
 #print(cmfs)
 illuminant='D65'
 sd_illuminant = colour.ILLUMINANTS_SDS[illuminant]
-
+diode_measurement_points = [400, 457, 517, 572, 632, 700]
 #cp.plot_multi_sds(cmfs)
 
 illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illuminant]
@@ -31,11 +32,17 @@ illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illumina
 EPOCHS = 35
 BATCH = 250
 TRAIN_OR_LOAD = "LOAD"
-LOAD_NUM = 21
-LOAD_NAME = "./istrenirani_modeli/sa_kaggle/6_diode/istrenirani_modeli/istreniran_model_6_"+str(LOAD_NUM)+"/"
-#LOAD_NAME = "./istrenirani_modeli/isteniran_model_99"
-REMOVE_MEASURING_POINTS = False
-PLOT = False
+LOAD_NUM = 71
+LOAD_NAME = "./istrenirani_modeli/sa_kaggle/3_diode_kaggle/istreniran_model_"+str(LOAD_NUM)+"/"
+LOAD_NAME = "./istrenirani_modeli/sa_kaggle/3_diode_kaggle/istreniran_model_71_1.23_1.01_4.25/"
+number_of_diodes = 3
+if number_of_diodes < 6:
+    REMOVE_MEASURING_POINTS = True
+else:
+    REMOVE_MEASURING_POINTS = FalsePLOT = False
+
+PLOT = True
+PLOT_HIST = True
 directory = os.path.dirname(os.path.realpath(__file__))
 
 des = []
@@ -84,10 +91,28 @@ if __name__ == '__main__':  # When we call the script directly ...
                             if i == 1:
                                 new_element = list(np.array(line).astype(np.float))[1:-1]
                                 if REMOVE_MEASURING_POINTS:
-                                    new_element.pop(5)
-                                    new_element.pop(3)
-                                    new_element.pop(2)
-                                    new_element.pop(0)
+                                    if number_of_diodes == 5:
+                                        new_element.pop(0)
+                                        diode_measurement_points.pop(0)
+                                    elif number_of_diodes == 4:
+                                        new_element.pop(5)
+                                        new_element.pop(0)
+                                        diode_measurement_points.pop(5)
+                                        diode_measurement_points.pop(0)
+
+                                    elif number_of_diodes == 3:
+                                        new_element.pop(5)
+                                        new_element.pop(3)
+                                        new_element.pop(0)
+                                        diode_measurement_points.pop(5)
+                                        diode_measurement_points.pop(3)
+                                        diode_measurement_points.pop(0)
+
+                                    elif number_of_diodes == 2:
+                                        new_element.pop(5)
+                                        new_element.pop(4)
+                                        new_element.pop(2)
+                                        new_element.pop(0)
 
                                 x_train.append(new_element)
                                 if len(x_train[-1]) > 9:
@@ -147,8 +172,9 @@ if __name__ == '__main__':  # When we call the script directly ...
             if name == "data.txt":
 
                 f_data = open(os.path.join(root, "data.txt"), "r")
-                #f_data = open("./dataset/za_rad/test/red 10/42/data.txt")
-                #f_data = open("./dataset/za_rad/sve_zajedno/red 18/37/data.txt")
+                #f_data = open("./dataset/za_rad/test/red 27/5/data.txt")
+                #PLOT=True
+                #f_data = open("./dataset/za_rad/sve_zajedno/red 2/40/data.txt")
                 mreza = None
                 izlaz = None
 
@@ -159,10 +185,29 @@ if __name__ == '__main__':  # When we call the script directly ...
                         print(root)
                         new_element = list(np.array(line).astype(np.float))[1:-1]
                         if REMOVE_MEASURING_POINTS:
-                            new_element.pop(5)
-                            new_element.pop(3)
-                            new_element.pop(2)
-                            new_element.pop(0)
+                            diode_measurement_points = [400, 457, 517, 572, 632, 700]
+                            if number_of_diodes == 5:
+                                new_element.pop(0)
+                                diode_measurement_points.pop(0)
+                            elif number_of_diodes == 4:
+                                new_element.pop(5)
+                                new_element.pop(0)
+                                diode_measurement_points.pop(5)
+                                diode_measurement_points.pop(0)
+
+                            elif number_of_diodes == 3:
+                                new_element.pop(5)
+                                new_element.pop(3)
+                                new_element.pop(0)
+                                diode_measurement_points.pop(5)
+                                diode_measurement_points.pop(3)
+                                diode_measurement_points.pop(0)
+
+                            elif number_of_diodes == 2:
+                                new_element.pop(5)
+                                new_element.pop(4)
+                                new_element.pop(2)
+                                new_element.pop(0)
 
                         x_input = [new_element]
                         #y_res = sess.run([y], feed_dict={
@@ -215,7 +260,7 @@ if __name__ == '__main__':  # When we call the script directly ...
                             plt.ylabel("Spectral Distribution [arb. dim.]")
                             plt.title(root[26:]+"   de = "+"{:.2f}".format(de))
                             nm = np.asarray(np.linspace(380, 730, 36))  # example new x-axis
-                            plt.plot([400, 457, 517, 572, 632, 700],
+                            plt.plot(diode_measurement_points,
                                      new_element, 'bo', label='Measurement points')
 
                             plt.plot(nm, mreza, '--', label='Estimated spectrum')
@@ -231,8 +276,14 @@ if __name__ == '__main__':  # When we call the script directly ...
     des.sort(reverse=True)
     print("Sorted D Es: ", des)
     print("Average = ", np.average(des))
+    print("Median = ", statistics.median(des))
     print("Max = ", np.max(des))
     print("Min = ", np.min(des))
+
+    if PLOT_HIST:
+        plt.hist(des, bins=100)
+        plt.style.use('ggplot')
+        plt.show()
 
 
 

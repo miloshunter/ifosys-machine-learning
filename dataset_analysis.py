@@ -1,7 +1,7 @@
 import time, os, argparse, io
 # Tensorflow and numpy!
-import tensorflow.keras.models
-from tensorflow.keras import optimizers
+#import tensorflow.keras.models
+#from tensorflow.keras import optimizers
 import numpy as np
 import re
 
@@ -149,29 +149,29 @@ if __name__ == '__main__':  # When we call the script directly ...
     plot_color = []
     plot_patches = []
     plot_labels = []
-    plot_symbols = ['D', 'o', '*', 'X']
+    plot_symbols = ['D', 'o', '*', 'X', 'v']
 
     TITLE = 'Saturated RGB and White Colors'
 
-    files.append("./dataset/za_rad/sve_zajedno/red 17/37/")
-    plot_labels.append('♦ R17-C37')
+    files.append("./dataset/za_rad/sve_zajedno/red 1/27/")
+    plot_labels.append('♦ R17-C37 - Bad measurement')
     plot_color.append('r')
 
-    files.append("./dataset/za_rad/sve_zajedno/red 18/37/")
-    plot_labels.append('• R18-C37')
-    plot_color.append('g')
-
-    files.append("./dataset/za_rad/sve_zajedno/red 18/36/")
-    plot_labels.append('• R18-C36')
-    plot_color.append('y')
-#
-    files.append("./dataset/za_rad/sve_zajedno/red 19/37/")
-    plot_labels.append('★ R19-C37')
+    files.append("./dataset/za_rad/sve_zajedno/red 1/32/")
+    plot_labels.append('• R18-C37 - Color for comparison')
     plot_color.append('b')
-#
-    files.append("./dataset/za_rad/sve_zajedno/red 16/37/")
-    plot_labels.append('✖ R16-C37')
-    plot_color.append('0.5')
+
+    # files.append("./dataset/za_rad/sve_zajedno/red 2/40/")
+    # plot_labels.append('• R18-C36')
+    # plot_color.append('y')
+    #
+    # files.append("./dataset/za_rad/sve_zajedno/red 6/39/")
+    # plot_labels.append('★ R19-C37')
+    # plot_color.append('b')
+    #
+    # files.append("./dataset/za_rad/sve_zajedno/red 3/39/")
+    # plot_labels.append('✖ R16-C37')
+    # plot_color.append('r')
 
     brojac = 0
     for name in files:

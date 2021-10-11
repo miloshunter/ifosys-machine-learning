@@ -4,6 +4,7 @@ import tensorflow.keras.models
 import tensorflow as tf
 from tensorflow.keras import optimizers
 import numpy as np
+import statistics
 import re
 
 # Matplotlib, so we can graph our functions
@@ -25,18 +26,18 @@ sd_illuminant = colour.ILLUMINANTS_SDS[illuminant]
 
 illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illuminant]
 
-EPOCHS = 20*1800
-BATCH = 2500 #420
+EPOCHS = 100*18
+BATCH = 200 #420
 #TRAIN_OR_LOAD = "LOAD"
-TRAIN = True
+TRAIN = False
 
-LOAD = False
+LOAD = True
 LOAD_NUM = 0
-LOAD_NAME = "./istrenirani_modeli/6_diode_kucno/istreniran_model_"+str(LOAD_NUM)+"/"
+LOAD_NAME = "./istrenirani_modeli/6_dioda_SGD/istreniran_model_"#+str(LOAD_NUM)+"/"
 
 TEST = True
 
-NUM_CHECK = 20
+NUM_CHECK = 100
 NUM_COPY_TRAIN = 100
 
 number_of_diodes = 6
@@ -124,9 +125,10 @@ if __name__ == '__main__':  # When we call the script directly ...
     from tensorflow.keras.layers import Dense, Activation, Dropout
     from tensorflow.keras.initializers import GlorotNormal, GlorotUniform, RandomUniform
     from tensorflow.keras.models import Sequential, save_model, load_model
+    from tensorflow.keras import backend as K
 
     if LOAD:
-        putanja_modela = LOAD_NAME
+        putanja_modela = LOAD_NAME+str(LOAD_NUM)
         model = load_model(putanja_modela)
         print("Loaded old network")
     else:
@@ -140,24 +142,34 @@ if __name__ == '__main__':  # When we call the script directly ...
             Dense(72, activation='sigmoid', input_shape=x_train.shape[1:]),
             Dense(36, activation='sigmoid'),
         ])
-    nadam_opt = tf.keras.optimizers.Nadam()
+    nadam_opt = tf.keras.optimizers.Nadam(learning_rate=0.03)
     model.compile(loss='mean_squared_error', optimizer=nadam_opt, metrics=['mean_squared_error'])
     if TRAIN:
-        for i in range(LOAD_NUM, LOAD_NUM+int(EPOCHS/1800)):
-            print("Trening "+str(i)+" od "+str(int(EPOCHS/1800)+LOAD_NUM))
-            model.fit(x_train, y_train, verbose=1, epochs=1800, batch_size=BATCH)
+        for i in range(LOAD_NUM, LOAD_NUM+int(EPOCHS/18)):
+            print("Trening "+str(i)+" od "+str(int(EPOCHS/18)+LOAD_NUM))
+            if i == 20:
+                K.set_value(model.optimizer.learning_rate, 0.01)
+            if i == 40:
+                K.set_value(model.optimizer.learning_rate, 0.005)
+            if i == 150:
+                K.set_value(model.optimizer.learning_rate, 0.001)
+            if i == 190:
+                K.set_value(model.optimizer.learning_rate, 0.0001)
+            model.fit(x_train, y_train, verbose=1, epochs=18, batch_size=BATCH)
+
             #model.save('istrenirani_modeli/sa_kaggle/6_dioda_bez_tamnih/istrenirani_modeli/istreniran_model_'+str(i))
-            model.save('istrenirani_modeli/6_diode_kucno/istreniran_model_' + str(i))
+            model.save(LOAD_NAME + str(i))
 
             scores = model.evaluate(x_train, y_train, verbose=0)
             print(str(i) + " ->   Baseline Error: %.5f%%" % (100 - scores[1] * 100))
 
     if TEST:
         ukupno_avg = []
+        ukupno_median = []
         ukupno_max = []
         ukupno_min = []
         for i in range(LOAD_NUM, NUM_CHECK):
-            putanja_modela = "./istrenirani_modeli/6_diode_kucno/istreniran_model_"+str(i)+"/"
+            putanja_modela = LOAD_NAME + str(i)+"/"
             print("Racunanje za ", putanja_modela)
             model = load_model(putanja_modela)
             model.compile(loss='mean_squared_error', optimizer='nadam', metrics=['mean_squared_error'])
@@ -249,6 +261,7 @@ if __name__ == '__main__':  # When we call the script directly ...
                                     broj_grafika += 1
 
             ukupno_avg.append(np.average(des))
+            ukupno_median.append(statistics.median(des))
             ukupno_max.append(np.max(des))
             ukupno_min.append(np.min(des))
 
@@ -256,6 +269,7 @@ if __name__ == '__main__':  # When we call the script directly ...
             des.sort(reverse=True)
             #print("Sorted D Es: ", des)
             print("Average = ", np.average(des))
+            print("Median = ", statistics.median(des))
             print("Max = ", np.max(des))
             print("Min = ", np.min(des))
 
@@ -265,6 +279,7 @@ if __name__ == '__main__':  # When we call the script directly ...
 
         print("Ukupno Average = ", np.min(ukupno_avg))
         print("Ukupno Max = ", np.min(ukupno_max))
+        print("Ukupno Median = ", np.min(ukupno_median))
         print("Ukupno Min = ", np.min(ukupno_min))
 
         fig1 = plt.figure()
@@ -273,8 +288,8 @@ if __name__ == '__main__':  # When we call the script directly ...
         maxplot = fig1.add_subplot(1, 3, 2)
         maxplot.title.set_text("Max")
         minplot = fig1.add_subplot(1, 3, 3)
-        minplot.title.set_text("Min")
+        minplot.title.set_text("Median")
         avgplot.plot(ukupno_avg)
         maxplot.plot(ukupno_max)
-        minplot.plot(ukupno_min)
+        minplot.plot(ukupno_median)
         plt.show()
