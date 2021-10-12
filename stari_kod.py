@@ -34,7 +34,7 @@ BATCH = 250
 TRAIN_OR_LOAD = "LOAD"
 LOAD_NUM = 71
 LOAD_NAME = "./istrenirani_modeli/sa_kaggle/3_diode_kaggle/istreniran_model_"+str(LOAD_NUM)+"/"
-LOAD_NAME = "./istrenirani_modeli/sa_kaggle/3_diode_kaggle/istreniran_model_71_1.23_1.01_4.25/"
+LOAD_NAME = "./istrenirani_modeli/konacno_rad/3diode_1.23_1.01_4.25/"
 number_of_diodes = 3
 if number_of_diodes < 6:
     REMOVE_MEASURING_POINTS = True
