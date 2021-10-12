@@ -26,18 +26,18 @@ sd_illuminant = colour.ILLUMINANTS_SDS[illuminant]
 
 illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illuminant]
 
-EPOCHS = 100*18
-BATCH = 200 #420
+EPOCHS = 200*18
+BATCH = 100 #420
 #TRAIN_OR_LOAD = "LOAD"
-TRAIN = False
+TRAIN = True
 
-LOAD = True
+LOAD = False
 LOAD_NUM = 0
-LOAD_NAME = "./istrenirani_modeli/6_dioda_SGD/istreniran_model_"#+str(LOAD_NUM)+"/"
+LOAD_NAME = "./istrenirani_modeli/6_diode_kucno/istreniran_model_"#+str(LOAD_NUM)+"/"
 
 TEST = True
 
-NUM_CHECK = 100
+NUM_CHECK = 200
 NUM_COPY_TRAIN = 100
 
 number_of_diodes = 6
@@ -157,7 +157,6 @@ if __name__ == '__main__':  # When we call the script directly ...
                 K.set_value(model.optimizer.learning_rate, 0.0001)
             model.fit(x_train, y_train, verbose=1, epochs=18, batch_size=BATCH)
 
-            #model.save('istrenirani_modeli/sa_kaggle/6_dioda_bez_tamnih/istrenirani_modeli/istreniran_model_'+str(i))
             model.save(LOAD_NAME + str(i))
 
             scores = model.evaluate(x_train, y_train, verbose=0)

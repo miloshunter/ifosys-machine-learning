@@ -41,8 +41,8 @@ if number_of_diodes < 6:
 else:
     REMOVE_MEASURING_POINTS = FalsePLOT = False
 
-PLOT = True
-PLOT_HIST = True
+PLOT = False
+PLOT_HIST = False
 directory = os.path.dirname(os.path.realpath(__file__))
 
 des = []
@@ -281,8 +281,10 @@ if __name__ == '__main__':  # When we call the script directly ...
     print("Min = ", np.min(des))
 
     if PLOT_HIST:
-        plt.hist(des, bins=100)
-        plt.style.use('ggplot')
+        plt.title("Histogram of ΔE00 for "+str(number_of_diodes)+" diodes")
+        plt.xlabel("ΔE00 (CIE2000) metric")
+        plt.ylabel("Number of test samples")
+        plt.hist(des, range=(0, 5), bins=100)
         plt.show()
 
 
