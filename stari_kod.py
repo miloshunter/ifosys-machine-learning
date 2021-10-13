@@ -10,6 +10,7 @@ import re
 # The Agg backend is here for those running this on a server without X sessions
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure
 import matplotlib.patches as mpatches
 import colour
 import colour
@@ -29,20 +30,40 @@ diode_measurement_points = [400, 457, 517, 572, 632, 700]
 
 illuminant_xy=colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illuminant]
 
+svi_preko_3_imena = []
+svi_preko_3_des = []
+
+
 EPOCHS = 35
 BATCH = 250
 TRAIN_OR_LOAD = "LOAD"
 LOAD_NUM = 71
 LOAD_NAME = "./istrenirani_modeli/sa_kaggle/3_diode_kaggle/istreniran_model_"+str(LOAD_NUM)+"/"
-LOAD_NAME = "./istrenirani_modeli/konacno_rad/3diode_1.23_1.01_4.25/"
 number_of_diodes = 3
+
+LOAD_NAMES = ["./istrenirani_modeli/konacno_rad/6dioda_1.15_0.96_3.12/",
+              "./istrenirani_modeli/konacno_rad/5dioda_1.13_0.99_3.44/",
+              "./istrenirani_modeli/konacno_rad/4diode_1.21_1.03_3.62/",
+              "./istrenirani_modeli/konacno_rad/3diode_1.23_1.01_4.25/"
+              ]
+
+if number_of_diodes==6:
+    LOAD_NAME = LOAD_NAMES[0]
+if number_of_diodes==5:
+    LOAD_NAME = LOAD_NAMES[1]
+if number_of_diodes==4:
+    LOAD_NAME = LOAD_NAMES[2]
+if number_of_diodes==3:
+    LOAD_NAME = LOAD_NAMES[3]
+
+
 if number_of_diodes < 6:
     REMOVE_MEASURING_POINTS = True
 else:
     REMOVE_MEASURING_POINTS = FalsePLOT = False
 
 PLOT = False
-PLOT_HIST = False
+PLOT_HIST = True
 directory = os.path.dirname(os.path.realpath(__file__))
 
 des = []
@@ -65,6 +86,14 @@ def get_mach_lrn_sd(data):
     sd = colour.SpectralDistribution(data_plot, name='MachineLearning')  # w=np.array(measWhite)
 
     return sd
+
+
+def cm_to_inch(value):
+    return value/2.54
+
+
+plt.rcParams['figure.figsize'] = [cm_to_inch(18), cm_to_inch(6)]
+
 
 if __name__ == '__main__':  # When we call the script directly ...
     # ... we parse a potentiel --nb_neurons argument
@@ -253,6 +282,11 @@ if __name__ == '__main__':  # When we call the script directly ...
 
                         de = colour.delta_E(Lab_ref, Lab_machinelearning, method='CIE 2000')
                         des.append(de)
+
+                        if de > 3:
+                            svi_preko_3_imena.append(root)
+                            svi_preko_3_des.append(de)
+
                         print("deltaE ref VS Machine_Learning = ", de)
                         if PLOT: #Should i PLOT
                             ax = plt.subplot()
@@ -281,13 +315,16 @@ if __name__ == '__main__':  # When we call the script directly ...
     print("Min = ", np.min(des))
 
     if PLOT_HIST:
-        plt.title("Histogram of ΔE00 for "+str(number_of_diodes)+" diodes")
-        plt.xlabel("ΔE00 (CIE2000) metric")
+        #plt.axes().set_aspect(0.16)
+        plt.title("Histogram of ΔE₀₀ for "+str(number_of_diodes)+" diodes")
+        plt.xlabel("ΔE₀₀ (CIE2000) metric")
         plt.ylabel("Number of test samples")
         plt.hist(des, range=(0, 5), bins=100)
+        plt.savefig('/home/milos/hist'+str(number_of_diodes)+'.png', bbox_inches='tight')
         plt.show()
 
-
+    for ime, de in zip(svi_preko_3_imena, svi_preko_3_des):
+        print("Des ", de, " ime ", ime[26:])
 
     # Finally we save the graph to check that it looks like what we wanted
     #saver.save(sess, result_folder + '/data.chkp')

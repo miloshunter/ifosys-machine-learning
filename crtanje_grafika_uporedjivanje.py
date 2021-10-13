@@ -43,7 +43,15 @@ LOAD_NAMES = ["./istrenirani_modeli/konacno_rad/6dioda_1.15_0.96_3.12/",
               "./istrenirani_modeli/konacno_rad/3diode_1.23_1.01_4.25/"
               ]
 
-f_data = open("./dataset/za_rad/sve_zajedno/red 1/29/data.txt")
+def cm_to_inch(value):
+    return value/2.54
+
+
+plt.rcParams['figure.figsize'] = [cm_to_inch(18), cm_to_inch(10)]
+
+
+TITLE = "Estimated spectrums for test sample row 8 column 19"
+f_data = open("./dataset/za_rad/test/red 18/19/data.txt")
 
 number_of_diodes = 3
 if number_of_diodes < 6:
@@ -58,11 +66,12 @@ directory = os.path.dirname(os.path.realpath(__file__))
 des = []
 
 plot_symbols = [4, 5, 6, 7]
-plot_colors = ['b', 'r', 'g', 'm']
-plot_labels = ['6 diodes',
-               '5 diodes',
-               '4 diodes',
-               '3 diodes']
+plot_colors = ['b', 'r', 'g', 'c']
+plot_lines_styles = ['-.', '--', '-.', '--']
+plot_labels = ['6 - ',
+               '5 - ',
+               '4 - ',
+               '3 - ']
 
 
 def get_ref_sd(data):
@@ -89,7 +98,7 @@ if __name__ == '__main__':  # When we call the script directly ...
     ax = plt.subplot()
     plt.xlabel("Wavelength [nm]")
     plt.ylabel("Spectral Distribution [arb. dim.]")
-    plt.title("Estimated spectrums for test sample row 2 column 40")
+    plt.title(TITLE)
 
     mreza = None
     izlaz = None
@@ -159,18 +168,20 @@ if __name__ == '__main__':  # When we call the script directly ...
                 if PLOT: #Should i PLOT
 
                     nm = np.asarray(np.linspace(380, 730, 36))  # example new x-axis
-                    plt.plot(diode_measurement_points[j],
-                             new_element[j], linestyle="None", c=plot_colors[j], marker=plot_symbols[j])
 
-                    plt.plot(nm, mreza, '-.', c=plot_colors[j], label=plot_labels[j])
+                    plt.plot(nm, mreza, linestyle=plot_lines_styles[j], c=plot_colors[j], label=plot_labels[j]+" ΔE₀₀: {:.2f}".format(de), zorder=1)
 
-                    col_patch = mpatches.Patch(label='Color patch')
-                    col_patch.set_color(RGB_ref)
-                    handles, labels = ax.get_legend_handles_labels()
-                    handles.append(col_patch)
-            plt.plot(nm, izlaz, c='k')
-            plt.legend(handles=handles)
-            plt.show()
+    for j in range(4):
+        plt.plot(diode_measurement_points[j],
+                 new_element[j], linestyle="None", c=plot_colors[j], marker=plot_symbols[j], markersize=7, zorder=10)
+
+    plt.plot(nm, izlaz, c='0.6', label='Reference')
+    col_patch = mpatches.Patch(label='Color patch')
+    col_patch.set_color(RGB_ref)
+    handles, labels = ax.get_legend_handles_labels()
+    handles.append(col_patch)
+    plt.legend(handles=handles)
+    plt.show()
 
     print("Delta Es : ", des)
     des.sort(reverse=True)
