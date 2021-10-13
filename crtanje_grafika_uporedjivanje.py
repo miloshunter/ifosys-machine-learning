@@ -50,8 +50,8 @@ def cm_to_inch(value):
 plt.rcParams['figure.figsize'] = [cm_to_inch(18), cm_to_inch(10)]
 
 
-TITLE = "Estimated spectrums for test sample row 8 column 19"
-f_data = open("./dataset/za_rad/test/red 18/19/data.txt")
+TITLE = "Estimated spectrums for test sample row 10 column 5"
+f_data = open("./dataset/za_rad/test/red 10/5/data.txt")
 
 number_of_diodes = 3
 if number_of_diodes < 6:
